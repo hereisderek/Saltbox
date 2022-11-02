@@ -30,9 +30,10 @@
 
 - name: Set Python version
   ansible.builtin.set_fact:
-    cloudplow_python: "{{ 'python3'
-                       if ansible_distribution_version is version('20.04', '==')
-                       else 'python3.8' }}"
+    cloudplow_python: "{{ 'python3.10'
+                       if ansible_distribution_version is version('22.10', '>=')
+                       else 'python3.8' if ansible_distribution_version is version('22.04', '==')
+                       else 'python3' }}"
 
 - name: "Execute Python role"
   ansible.builtin.include_role:
@@ -57,8 +58,11 @@
     requirements: "{{ cloudplow_requirements_path }}"
     virtualenv_python: "{{ cloudplow_python }}"
     virtualenv: "{{ cloudplow_venv_path }}"
+    extra_args: --upgrade
   become: true
   become_user: "{{ user.name }}"
+  environment:
+        SETUPTOOLS_USE_DISTUTILS: stdlib
 
 - name: Find pip3 path
   ansible.builtin.find:

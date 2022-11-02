@@ -30,11 +30,13 @@
   retries: "{{ '0' if (not continuous_integration) else '5' }}"
   delay: 10
   until: result is succeeded
+  when: ansible_distribution_version is version('22.10', '!=')
 
 - name: "Install Python {{ python_version }}"
   ansible.builtin.apt:
     name: "python{{ python_version }}"
     state: present
+  when: ansible_distribution_version is version('22.10', '!=')
 
 - name: "Install Python {{ python_version }} dev"
   ansible.builtin.apt:
