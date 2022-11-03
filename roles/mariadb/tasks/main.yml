@@ -18,4 +18,4 @@
 
 - name: Sleep for {{ mariadb_containers_startup_delay }} seconds
   ansible.builtin.wait_for:
-    timeout: "{{ lookup('mariadb_containers_startup_delay', default='80') }}"
+    timeout: "{{ lookup('vars', 'mariadb_containers_startup_delay', default='80') }}"
