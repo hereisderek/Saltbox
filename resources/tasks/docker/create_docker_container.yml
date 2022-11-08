@@ -28,7 +28,7 @@
     cpu_period: "{{ lookup('vars', _var_prefix + '_docker_cpu_period', default=omit) }}"
     cpu_quota: "{{ lookup('vars', _var_prefix + '_docker_cpu_quota', default=omit) }}"
     cpu_shares: "{{ lookup('vars', _var_prefix + '_docker_cpu_shares', default=omit) }}"
-    cpus: "{{ (docker_cpus_default is defined) | ternary(docker_cpus_default, lookup('vars', _var_prefix + '_docker_cpus', default=omit)) }}"
+    # cpus: "{{ (docker_cpus_default is defined) | ternary(docker_cpus_default, lookup('vars', _var_prefix + '_docker_cpus', default=omit)) }}"
     cpuset_cpus: "{{ lookup('vars', _var_prefix + '_docker_cpuset_cpus', default=omit) }}"
     cpuset_mems: "{{ lookup('vars', _var_prefix + '_docker_cpuset_mems', default=omit) }}"
     default_host_ip: ""
@@ -62,7 +62,7 @@
     log_driver: "{{ (docker_log_driver != 'default') | ternary(docker_log_driver, lookup('vars', _var_prefix + '_docker_log_driver', default=omit)) }}"
     log_options: "{{ (docker_log_options != 'default') | ternary(docker_log_options, lookup('vars', _var_prefix + '_docker_log_options', default=omit)) }}"
     mac_address: "{{ lookup('vars', _var_prefix + '_docker_mac_address', default=omit) }}"
-    memory: "{{ (docker_memory_default is defined) | ternary(docker_memory_default, lookup('vars', _var_prefix + '_docker_memory', default=omit)) }}"
+    # memory: "{{ (docker_memory_default is defined) | ternary(docker_memory_default, lookup('vars', _var_prefix + '_docker_memory', default=omit)) }}"
     memory_reservation: "{{ lookup('vars', _var_prefix + '_docker_memory_reservation', default=omit) }}"
     memory_swap: "{{ lookup('vars', _var_prefix + '_docker_memory_swap', default=omit) }}"
     memory_swappiness: "{{ lookup('vars', _var_prefix + '_docker_memory_swappiness', default=omit) }}"
@@ -103,6 +103,9 @@
               else lookup('vars', _var_prefix + '_docker_volumes', default=omit) }}"
     volumes_from: "{{ lookup('vars', _var_prefix + '_docker_volumes_from', default=omit) }}"
     working_dir: "{{ lookup('vars', _var_prefix + '_docker_working_dir', default=omit) }}"
+    cpus:  "{{ (lookup('vars', _var_prefix + '_docker_cpus', default=docker_cpus_default) | default(omit, true)) }}"
+    memory:  "{{ (lookup('vars', _var_prefix + '_docker_memory', default=docker_memory_default) | default(omit, true)) }}"
+
   register: result
   retries: "{{ '0' if (not continuous_integration) else '5' }}"
   delay: 10
