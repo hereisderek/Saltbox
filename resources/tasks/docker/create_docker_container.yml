@@ -105,6 +105,7 @@
     working_dir: "{{ lookup('vars', _var_prefix + '_docker_working_dir', default=omit) }}"
     cpus:  "{{ (lookup('vars', _var_prefix + '_docker_cpus', default=docker_cpus_default) | default(omit, true)) }}"
     memory:  "{{ (lookup('vars', _var_prefix + '_docker_memory', default=docker_memory_default) | default(omit, true)) }}"
+    timeout: "{{ (lookup('vars', _var_prefix + '_docker_start_timeout', default=docker_start_timeout) | default(60, true)) }}"
 
   register: result
   retries: "{{ '0' if (not continuous_integration) else '5' }}"
