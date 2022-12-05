@@ -18,7 +18,7 @@
   ansible.builtin.apt_key:
     id: "{{ docker_apt_key_id }}"
     url: "{{ docker_apt_key_url }}"
-    keyring: /usr/share/keyrings/docker.gpg
+    keyring: /etc/apt/keyrings/docker.gpg
   register: result
   retries: "{{ '0' if (not continuous_integration) else '5' }}"
   delay: 10
