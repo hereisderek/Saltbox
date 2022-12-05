@@ -34,6 +34,17 @@
     - /mnt/local/Media/Music
     - /mnt/local/Media/TV
 
+- name: Create custom common directories
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: directory
+    owner: "{{ user.name }}"
+    group: "{{ user.name }}"
+    mode: "0775"
+  with_items: "{{ lookup('vars', 'paths_folders_list', default=[])
+                + lookup('vars', 'paths_folders_list_custom', default=[]) }}"
+  ignore_errors: true
+
 - name: Check if 'localhost.yml' exists
   ansible.builtin.stat:
     path: "/srv/git/saltbox/inventories/host_vars/localhost.yml"
