@@ -15,7 +15,7 @@
     state: absent
 
 - name: "Binary | Remove old official repository entry"
-  ansible.builtin.shell: "find /etc/apt/ -type f -name \"*.list\" -exec sed -i '/https:\/\/download.docker.com\/linux\//d' {} \;"
+  ansible.builtin.shell: "find /etc/apt/ -type f -name '*.list' -exec sed -i '/https:\/\/download.docker.com\/linux\//d' {} \\;"
   register: cherry_secret_key
 
 - name: Binary | Add official gpg signing key to keyring
