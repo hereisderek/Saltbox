@@ -11,8 +11,12 @@
   ansible.builtin.apt_repository:
     repo: "{{ docker_apt_repo_url_old }}"
     filename: "{{ docker_apt_repo_filename }}"
-    update_cache: true
+    update_cache: false
     state: absent
+
+- name: "Binary | Remove old official repository entry"
+  ansible.builtin.shell: "find /etc/apt/ -type f -name \"*.list\" -exec sed -i '/https:\/\/download.docker.com\/linux\//d' {} \;"
+  register: cherry_secret_key
 
 - name: Binary | Add official gpg signing key to keyring
   ansible.builtin.apt_key:
