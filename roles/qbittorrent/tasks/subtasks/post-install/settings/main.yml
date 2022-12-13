@@ -22,8 +22,8 @@
 - name: Post-Install | Settings | Update Port 56882 in 'qBittorrent.conf' config settings
   community.general.ini_file:
     path: "{{ qbittorrent_paths_conf }}"
-    section: BitTorrent
-    option: Session\Port
+    section: Preferences
+    option: Advanced\trackerPortForwarding
     value: "{{ qbittorrent_docker_ports_56882 }}"
     no_extra_spaces: true
     state: present
