@@ -28,6 +28,14 @@
 - name: Docker | Check if in a lxc container
   ansible.builtin.set_fact:
     storage_driver: "{{ (is_lxc) | ternary('fuse-overlayfs',('zfs' in var_lib_file_system.stdout) | ternary('zfs','overlay2')) }}"
+  when: (docker_storage_driver_override is undefined)
+
+- name: "Docker | Set storage driver: {{ docker_storage_driver_override }}"
+  ansible.builtin.set_fact:
+    storage_driver: "{{ docker_storage_driver_override }}"
+  when: (docker_storage_driver_override is defined)
+
+
 
 - name: Docker | Install fuse-overlayfs
   ansible.builtin.apt:
