@@ -74,6 +74,9 @@ jobs:
     steps:
       - uses: actions/checkout@v3
 
+      - name: Create /srv/ansible
+        run: sudo mkdir /srv/ansible
+
       - name: Install Dependencies
         uses: nick-fields/retry@v2
         with:
