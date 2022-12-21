@@ -19,6 +19,8 @@
     container_default_behavior: compatibility
     tls_hostname: localhost
     state: stopped
+    comparisons:
+      '*': ignore
 
 - name: Post-Install | Settings | Update settings
   ansible.builtin.shell: |
@@ -27,9 +29,11 @@
   become_user: "{{ user.name }}"
   loop: "{{ nzbhydra2_config_settings_list }}"
 
-- name: Post-Install | Settings | Start container
+- name: Post-Install | Settings | Start container # noqa args[module]
   community.docker.docker_container:
     name: "{{ nzbhydra2_docker_container }}"
     container_default_behavior: compatibility
     tls_hostname: localhost
     state: "{{ nzbhydra2_docker_state }}"
+    comparisons:
+      '*': ignore

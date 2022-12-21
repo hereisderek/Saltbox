@@ -65,7 +65,7 @@ rclone_vfs_mount_start_command: |-
 rclone_vfs_mount_stop_command: /bin/fusermount -uz /mnt/remote
 
 rclone_vfs_mount_start_post_command: |-
-  /usr/bin/rclone rc vfs/refresh recursive=true --rc-addr localhost:5572 _async=true
+  /usr/bin/rclone rc vfs/refresh recursive=true --url http://localhost:5572 _async=true
 
 ################################
 # Rclone VFS Cache
@@ -108,7 +108,7 @@ rclone_vfs_cache_mount_start_command: |-
 rclone_vfs_cache_mount_stop_command: /bin/fusermount -uz /mnt/remote
 
 rclone_vfs_cache_mount_start_post_command: |-
-  /usr/bin/rclone rc vfs/refresh recursive=true --rc-addr localhost:5572 _async=true
+  /usr/bin/rclone rc vfs/refresh recursive=true --url http://localhost:5572 _async=true
 
 ################################
 # Rclone VFS Refresh
@@ -116,4 +116,4 @@ rclone_vfs_cache_mount_start_post_command: |-
 
 rclone_vfs_refresh_interval: 86400
 rclone_vfs_refresh_command: |-
-  /usr/bin/rclone rc vfs/refresh recursive=true --rc-addr localhost:5572 _async=true
+  /usr/bin/rclone rc vfs/refresh recursive=true --url http://localhost:5572 _async=true
