@@ -26,6 +26,7 @@
   loop:
     - "{{ docker_apt_repo_url_old }}"
     - "{{ docker_apt_repo_url_old2 }}"
+    - "{{ docker_apt_repo_url_old3 }}"
 
 - name: Binary | Add official repository
   ansible.builtin.apt_repository:
