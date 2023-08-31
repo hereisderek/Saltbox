@@ -129,6 +129,7 @@
     name: apprise
     executable: pip3
     state: "latest"
+    extra_args: "--break-system-packages"
 
 - name: Fetch PCI Info
   ansible.builtin.shell: "lspci -v -s $(lspci | grep -E '.*VGA.*Intel.*' | cut -d' ' -f 1) 2>/dev/null || :"
