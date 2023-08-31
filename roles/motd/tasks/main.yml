@@ -93,6 +93,7 @@
   ansible.builtin.pip:
     requirements: /opt/motd/requirements.txt
     executable: pip3
+    extra_args: "--break-system-packages"
 
 - name: Check if 'config.json' exists
   ansible.builtin.stat:
