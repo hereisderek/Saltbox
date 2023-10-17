@@ -14,6 +14,12 @@
 lidarr_instances: ["lidarr"]
 
 ################################
+# Configuration
+################################
+
+lidarr_external_auth: false
+
+################################
 # Paths
 ################################
 
@@ -30,8 +36,9 @@ lidarr_paths_config_location: "{{ lidarr_paths_location }}/config.xml"
 lidarr_web_subdomain: "{{ lidarr_name }}"
 lidarr_web_domain: "{{ user.domain }}"
 lidarr_web_port: "8686"
-lidarr_web_url: "{{ 'https://' + lookup('vars', lidarr_name + '_web_subdomain', default=lidarr_web_subdomain)
-                    + '.' + lookup('vars', lidarr_name + '_web_domain', default=lidarr_web_domain) }}"
+lidarr_web_url: "{{ 'https://' + (lookup('vars', lidarr_name + '_web_subdomain', default=lidarr_web_subdomain) + '.' + lookup('vars', lidarr_name + '_web_domain', default=lidarr_web_domain)
+                 if (lookup('vars', lidarr_name + '_web_subdomain', default=lidarr_web_subdomain) | length > 0)
+                 else lookup('vars', lidarr_name + '_web_domain', default=lidarr_web_domain)) }}"
 
 ################################
 # DNS
@@ -46,22 +53,12 @@ lidarr_dns_proxy: "{{ dns.proxied }}"
 ################################
 
 lidarr_traefik_sso_middleware: "{{ traefik_default_sso_middleware }}"
-
-lidarr_traefik_middleware_default: "{{ traefik_default_middleware + ','
-                                       + lookup('vars', lidarr_name + '_traefik_sso_middleware', default=lidarr_traefik_sso_middleware)
-                                    if (lookup('vars', lidarr_name + '_traefik_sso_middleware', default=lidarr_traefik_sso_middleware) | length > 0)
-                                    else traefik_default_middleware }}"
+lidarr_traefik_middleware_default: "{{ traefik_default_middleware }}"
 lidarr_traefik_middleware_custom: ""
-lidarr_traefik_middleware: "{{ lidarr_traefik_middleware_default + ','
-                               + lidarr_traefik_middleware_custom
-                            if (not lidarr_traefik_middleware_custom.startswith(',') and lidarr_traefik_middleware_custom | length > 0)
-                            else lidarr_traefik_middleware_default
-                               + lidarr_traefik_middleware_custom }}"
-
 lidarr_traefik_certresolver: "{{ traefik_default_certresolver }}"
 lidarr_traefik_enabled: true
 lidarr_traefik_api_enabled: true
-lidarr_traefik_api_endpoint: "`/api`,`/feed`,`/ping`"
+lidarr_traefik_api_endpoint: "PathPrefix(`/api`) || PathPrefix(`/feed`) || PathPrefix(`/ping`)"
 
 ################################
 # API
@@ -74,7 +71,7 @@ lidarr_api_key:
 # THEME
 ################################
 
-# Options can be found at https://github.com/gilbN/theme.park
+# Options can be found at https://github.com/themepark-dev/theme.park
 lidarr_themepark_enabled: false
 lidarr_themepark_theme: "{{ global_themepark_theme }}"
 lidarr_themepark_domain: "{{ global_themepark_domain }}"
@@ -116,7 +113,7 @@ lidarr_docker_envs: "{{ lookup('vars', lidarr_name + '_docker_envs_default', def
 lidarr_docker_commands_default: []
 lidarr_docker_commands_custom: []
 lidarr_docker_commands: "{{ lookup('vars', lidarr_name + '_docker_commands_default', default=lidarr_docker_commands_default)
-                            + lookup('vars', lidarr_name + '_docker_docker_commands_custom', default=lidarr_docker_commands_custom) }}"
+                            + lookup('vars', lidarr_name + '_docker_commands_custom', default=lidarr_docker_commands_custom) }}"
 
 # Volumes
 lidarr_docker_volumes_default:

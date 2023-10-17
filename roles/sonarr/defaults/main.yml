@@ -14,6 +14,12 @@
 sonarr_instances: ["sonarr"]
 
 ################################
+# Configuration
+################################
+
+sonarr_external_auth: false
+
+################################
 # Paths
 ################################
 
@@ -30,8 +36,9 @@ sonarr_paths_config_location: "{{ sonarr_paths_location }}/config.xml"
 sonarr_web_subdomain: "{{ sonarr_name }}"
 sonarr_web_domain: "{{ user.domain }}"
 sonarr_web_port: "8989"
-sonarr_web_url: "{{ 'https://' + lookup('vars', sonarr_name + '_web_subdomain', default=sonarr_web_subdomain)
-                    + '.' + lookup('vars', sonarr_name + '_web_domain', default=sonarr_web_domain) }}"
+sonarr_web_url: "{{ 'https://' + (lookup('vars', sonarr_name + '_web_subdomain', default=sonarr_web_subdomain) + '.' + lookup('vars', sonarr_name + '_web_domain', default=sonarr_web_domain)
+                 if (lookup('vars', sonarr_name + '_web_subdomain', default=sonarr_web_subdomain) | length > 0)
+                 else lookup('vars', sonarr_name + '_web_domain', default=sonarr_web_domain)) }}"
 
 ################################
 # DNS
@@ -46,22 +53,12 @@ sonarr_dns_proxy: "{{ dns.proxied }}"
 ################################
 
 sonarr_traefik_sso_middleware: "{{ traefik_default_sso_middleware }}"
-
-sonarr_traefik_middleware_default: "{{ traefik_default_middleware + ','
-                                       + lookup('vars', sonarr_name + '_traefik_sso_middleware', default=sonarr_traefik_sso_middleware)
-                                    if (lookup('vars', sonarr_name + '_traefik_sso_middleware', default=sonarr_traefik_sso_middleware) | length > 0)
-                                    else traefik_default_middleware }}"
+sonarr_traefik_middleware_default: "{{ traefik_default_middleware }}"
 sonarr_traefik_middleware_custom: ""
-sonarr_traefik_middleware: "{{ sonarr_traefik_middleware_default + ','
-                               + sonarr_traefik_middleware_custom
-                            if (not sonarr_traefik_middleware_custom.startswith(',') and sonarr_traefik_middleware_custom | length > 0)
-                            else sonarr_traefik_middleware_default
-                               + sonarr_traefik_middleware_custom }}"
-
 sonarr_traefik_certresolver: "{{ traefik_default_certresolver }}"
 sonarr_traefik_enabled: true
 sonarr_traefik_api_enabled: true
-sonarr_traefik_api_endpoint: "`/api`,`/feed`,`/ping`"
+sonarr_traefik_api_endpoint: "PathPrefix(`/api`) || PathPrefix(`/feed`) || PathPrefix(`/ping`)"
 
 ################################
 # API
@@ -74,7 +71,7 @@ sonarr_api_key:
 # THEME
 ################################
 
-# Options can be found at https://github.com/gilbN/theme.park
+# Options can be found at https://github.com/themepark-dev/theme.park
 sonarr_themepark_enabled: false
 sonarr_themepark_theme: "{{ global_themepark_theme }}"
 sonarr_themepark_domain: "{{ global_themepark_domain }}"
@@ -116,22 +113,25 @@ sonarr_docker_envs: "{{ lookup('vars', sonarr_name + '_docker_envs_default', def
 sonarr_docker_commands_default: []
 sonarr_docker_commands_custom: []
 sonarr_docker_commands: "{{ lookup('vars', sonarr_name + '_docker_commands_default', default=sonarr_docker_commands_default)
-                            + lookup('vars', sonarr_name + '_docker_docker_commands_custom', default=sonarr_docker_commands_custom) }}"
+                            + lookup('vars', sonarr_name + '_docker_commands_custom', default=sonarr_docker_commands_custom) }}"
 
 # Volumes
 sonarr_docker_volumes_default:
   - "{{ sonarr_paths_location }}:/config"
   - "{{ server_appdata_path }}/scripts:/scripts"
+sonarr_docker_volumes_legacy:
   - "/mnt/unionfs/Media/TV:/tv"
 sonarr_docker_volumes_custom: []
 sonarr_docker_volumes_theme:
   - "{{ sonarr_paths_location }}/98-themepark:/etc/cont-init.d/98-themepark"
 sonarr_docker_volumes: "{{ lookup('vars', sonarr_name + '_docker_volumes_default', default=sonarr_docker_volumes_default)
                            + lookup('vars', sonarr_name + '_docker_volumes_custom', default=sonarr_docker_volumes_custom)
-                        if not (lookup('vars', sonarr_name + '_themepark_enabled', default=sonarr_themepark_enabled))
-                        else lookup('vars', sonarr_name + '_docker_volumes_default', default=sonarr_docker_volumes_default)
-                           + lookup('vars', sonarr_name + '_docker_volumes_custom', default=sonarr_docker_volumes_custom)
-                           + lookup('vars', sonarr_name + '_docker_volumes_theme', default=sonarr_docker_volumes_theme) }}"
+                           + (lookup('vars', sonarr_name + '_docker_volumes_legacy', default=sonarr_docker_volumes_legacy)
+                             if docker_legacy_volume
+                             else [])
+                           + (lookup('vars', sonarr_name + '_docker_volumes_theme', default=sonarr_docker_volumes_theme)
+                             if lookup('vars', sonarr_name + '_themepark_enabled', default=sonarr_themepark_enabled)
+                             else []) }}"
 
 # Devices
 sonarr_docker_devices_default: []

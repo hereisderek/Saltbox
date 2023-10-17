@@ -13,3 +13,27 @@ backup_rclone_env: {}
 
 # Options can be found at https://rclone.org/docs/#bwlimit-bandwidth-spec
 backup_rclone_upload_speed_limit: "off"
+
+backup_instance: "Saltbox"
+
+################################
+# Notifications
+################################
+
+backup_notify_stop_docker_containers: true
+backup_notify_start_docker_containers: true
+backup_notify_size: true
+backup_notify_rclone_complete: true
+backup_notify_rsync_complete: true
+
+backup_google_template: '--drive-chunk-size="{{ backup_rclone_drive_chunk_size }}"'
+backup_dropbox_template: '--dropbox-chunk-size="{{ backup_rclone_dropbox_chunk_size }}" --disable-http2 --dropbox-pacer-min-sleep=250ms'
+
+################################
+# Cleanup
+################################
+
+# Defines how many of the archived backups to keep, so current backup is not counted in this
+backup_cleanup_number: 99
+backup_cleanup_enabled: false
+backup_cleanup_custom_rclone_flags: ""

@@ -22,7 +22,7 @@
 
 - name: Download 98-themepark
   ansible.builtin.get_url:
-    url: "https://raw.githubusercontent.com/GilbN/theme.park/master/docker-mods/prowlarr/root/etc/cont-init.d/98-themepark"
+    url: "https://raw.githubusercontent.com/themepark-dev/theme.park/master/docker-mods/prowlarr/root/etc/cont-init.d/98-themepark"
     dest: "{{ prowlarr_paths_location }}"
     owner: "{{ user.name }}"
     group: "{{ user.name }}"
@@ -36,6 +36,6 @@
 - name: Create Docker container
   ansible.builtin.include_tasks: "{{ resources_tasks_path }}/docker/create_docker_container.yml"
 
-- name: "Continue when Plex Docker container exists"
+- name: "Tweak Settings when SSO is enabled"
   ansible.builtin.import_tasks: "subtasks/auth.yml"
-  when: (prowlarr_traefik_sso_middleware | length > 0)
+  when: (prowlarr_traefik_sso_middleware | length > 0) and prowlarr_external_auth

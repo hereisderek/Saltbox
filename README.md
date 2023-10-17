@@ -7,7 +7,7 @@
 
 Saltbox is an Ansible-based solution for rapidly deploying a Docker containerized cloud media server heavily based on [Cloudbox](https://github.com/Cloudbox/Cloudbox).
 
-This project was designed for x64 machines running Ubuntu Server 20.04 LTS or 22.04 LTS. 
+This project was designed for x64 machines running Ubuntu Server 20.04 or 22.04. 
 
 ### Documentation
 
@@ -21,7 +21,7 @@ This project was designed for x64 machines running Ubuntu Server 20.04 LTS or 22
 - Radarr
 - Lidarr
 - Rclone
-- NZBGet
+- SABnzbd
 - ruTorrent
 - Tautulli
 - NZBHydra2
@@ -46,17 +46,17 @@ Thank you to [<img src="https://resources.jetbrains.com/storage/products/company
 <table>
 <tr>
     <td align="center" style="word-wrap: break-word; width: 150.0; height: 150.0">
-        <a href=https://github.com/desimaniac>
-            <img src=https://avatars.githubusercontent.com/u/5501908?v=4 width="100;"  alt=desimaniac/>
-            <br />
-            <sub style="font-size:14px"><b>desimaniac</b></sub>
-        </a>
-    </td>
-    <td align="center" style="word-wrap: break-word; width: 150.0; height: 150.0">
         <a href=https://github.com/saltydk>
             <img src=https://avatars.githubusercontent.com/u/6587950?v=4 width="100;"  alt=salty/>
             <br />
             <sub style="font-size:14px"><b>salty</b></sub>
+        </a>
+    </td>
+    <td align="center" style="word-wrap: break-word; width: 150.0; height: 150.0">
+        <a href=https://github.com/desimaniac>
+            <img src=https://avatars.githubusercontent.com/u/5501908?v=4 width="100;"  alt=desimaniac/>
+            <br />
+            <sub style="font-size:14px"><b>desimaniac</b></sub>
         </a>
     </td>
     <td align="center" style="word-wrap: break-word; width: 150.0; height: 150.0">
@@ -125,19 +125,19 @@ Thank you to [<img src="https://resources.jetbrains.com/storage/products/company
         </a>
     </td>
     <td align="center" style="word-wrap: break-word; width: 150.0; height: 150.0">
-        <a href=https://github.com/TABLE272>
-            <img src=https://avatars.githubusercontent.com/u/11992630?v=4 width="100;"  alt=TABLE272/>
+        <a href=https://github.com/maximuskowalski>
+            <img src=https://avatars.githubusercontent.com/u/13492750?v=4 width="100;"  alt=Max Kowalski/>
             <br />
-            <sub style="font-size:14px"><b>TABLE272</b></sub>
+            <sub style="font-size:14px"><b>Max Kowalski</b></sub>
         </a>
     </td>
 </tr>
 <tr>
     <td align="center" style="word-wrap: break-word; width: 150.0; height: 150.0">
-        <a href=https://github.com/maximuskowalski>
-            <img src=https://avatars.githubusercontent.com/u/13492750?v=4 width="100;"  alt=Max Kowalski/>
+        <a href=https://github.com/TABLE272>
+            <img src=https://avatars.githubusercontent.com/u/11992630?v=4 width="100;"  alt=TABLE272/>
             <br />
-            <sub style="font-size:14px"><b>Max Kowalski</b></sub>
+            <sub style="font-size:14px"><b>TABLE272</b></sub>
         </a>
     </td>
     <td align="center" style="word-wrap: break-word; width: 150.0; height: 150.0">
@@ -169,10 +169,10 @@ Thank you to [<img src="https://resources.jetbrains.com/storage/products/company
         </a>
     </td>
     <td align="center" style="word-wrap: break-word; width: 150.0; height: 150.0">
-        <a href=https://github.com/powerdude>
-            <img src=https://avatars.githubusercontent.com/u/780882?v=4 width="100;"  alt=powerdude/>
+        <a href=https://github.com/Aethenn>
+            <img src=https://avatars.githubusercontent.com/u/58144688?v=4 width="100;"  alt=Aethenn/>
             <br />
-            <sub style="font-size:14px"><b>powerdude</b></sub>
+            <sub style="font-size:14px"><b>Aethenn</b></sub>
         </a>
     </td>
 </tr>

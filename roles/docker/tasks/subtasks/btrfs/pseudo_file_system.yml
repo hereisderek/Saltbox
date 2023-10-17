@@ -14,13 +14,13 @@
     var_lib_docker_mount_exists: "{{ true if (ansible_mounts | json_query('[?mount == `/var/lib/docker`]')) else false }}"
 
 - name: BTRFS | Psuedo-File-System | Tasks when '/var/lib/docker' is not mounted
+  when: (not var_lib_docker_mount_exists)
   block:
-
     - name: BTRFS | Psuedo-File-System | Create blank '{{ docker_filesystem_path }}'
       ansible.builtin.file:
         path: "{{ docker_filesystem_path }}"
         attributes: "+C"
-        mode: '0644'
+        mode: "0644"
         state: touch
 
     - name: BTRFS | Psuedo-File-System | Set size on '{{ docker_filesystem_path }}'
@@ -54,8 +54,6 @@
         fstype: ext4
         opts: loop
         state: mounted
-
-  when: (not var_lib_docker_mount_exists)
 
 - name: BTRFS | Pseudo-File-System | Resize pseudo-file-system
   when: ('docker-filesystem-resize' in ansible_run_tags)

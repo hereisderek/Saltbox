@@ -14,6 +14,12 @@
 prowlarr_name: prowlarr
 
 ################################
+# Configuration
+################################
+
+prowlarr_external_auth: true
+
+################################
 # Paths
 ################################
 
@@ -29,7 +35,9 @@ prowlarr_paths_folders_list:
 prowlarr_web_subdomain: "{{ prowlarr_name }}"
 prowlarr_web_domain: "{{ user.domain }}"
 prowlarr_web_port: "9696"
-prowlarr_web_url: "{{ 'https://' + prowlarr_web_subdomain + '.' + prowlarr_web_domain }}"
+prowlarr_web_url: "{{ 'https://' + (prowlarr_web_subdomain + '.' + prowlarr_web_domain
+                   if (prowlarr_web_subdomain | length > 0)
+                   else prowlarr_web_domain) }}"
 
 ################################
 # DNS
@@ -44,27 +52,18 @@ prowlarr_dns_proxy: "{{ dns.proxied }}"
 ################################
 
 prowlarr_traefik_sso_middleware: "{{ traefik_default_sso_middleware }}"
-
-prowlarr_traefik_middleware_default: "{{ traefik_default_middleware + ','
-                                         + lookup('vars', prowlarr_name + '_traefik_sso_middleware', default=prowlarr_traefik_sso_middleware)
-                                      if (lookup('vars', prowlarr_name + '_traefik_sso_middleware', default=prowlarr_traefik_sso_middleware) | length > 0)
-                                      else traefik_default_middleware }}"
+prowlarr_traefik_middleware_default: "{{ traefik_default_middleware }}"
 prowlarr_traefik_middleware_custom: ""
-prowlarr_traefik_middleware: "{{ prowlarr_traefik_middleware_default + ','
-                                 + prowlarr_traefik_middleware_custom
-                              if (not prowlarr_traefik_middleware_custom.startswith(',') and prowlarr_traefik_middleware_custom | length > 0)
-                              else prowlarr_traefik_middleware_default
-                                 + prowlarr_traefik_middleware_custom }}"
 prowlarr_traefik_certresolver: "{{ traefik_default_certresolver }}"
 prowlarr_traefik_enabled: true
 prowlarr_traefik_api_enabled: true
-prowlarr_traefik_api_endpoint: "`/{[0-9]+}/api`,`/{[0-9]+}/download`,`/api`,`/ping`"
+prowlarr_traefik_api_endpoint: "PathRegexp(`/[0-9]+/api`) || PathRegexp(`/[0-9]+/download`) || PathPrefix(`/api`) || PathPrefix(`/ping`)"
 
 ################################
 # THEME
 ################################
 
-# Options can be found at https://github.com/gilbN/theme.park
+# Options can be found at https://github.com/themepark-dev/theme.park
 prowlarr_themepark_enabled: false
 prowlarr_themepark_theme: "{{ global_themepark_theme }}"
 prowlarr_themepark_domain: "{{ global_themepark_domain }}"
@@ -78,7 +77,7 @@ prowlarr_docker_container: "{{ prowlarr_name }}"
 
 # Image
 prowlarr_docker_image_pull: true
-prowlarr_docker_image_tag: "latest"
+prowlarr_docker_image_tag: "release"
 prowlarr_docker_image: "ghcr.io/hotio/prowlarr:{{ prowlarr_docker_image_tag }}"
 
 # Ports

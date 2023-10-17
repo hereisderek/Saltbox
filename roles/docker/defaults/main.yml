@@ -8,6 +8,13 @@
 #########################################################################
 ---
 ################################
+# Settings
+################################
+
+# Format is ["8.8.8.8", "8.8.4.4"]
+docker_dns: []
+
+################################
 # Docker APT Key
 ################################
 
@@ -24,8 +31,6 @@ docker_apt_repo_version: stable
 docker_apt_repo_url_old: "deb [arch=amd64] https://download.docker.com/linux/{{ ansible_distribution | lower }} {{ ansible_distribution_release }} {{ docker_apt_repo_version }}"  # noqa line-length
 
 docker_apt_repo_url_old2: "deb [arch=amd64 signed-by=/usr/share/keyrings/docker.gpg] https://download.docker.com/linux/{{ ansible_distribution | lower }} {{ ansible_distribution_release }} {{ docker_apt_repo_version }}"  # noqa line-length
-
-docker_apt_repo_url_old3: "deb [arch=amd64 signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/{{ ansible_distribution | lower }} {{ ansible_distribution_release }} {{ docker_apt_repo_version }}"
 
 docker_apt_repo_url: "deb [arch=amd64 signed-by=/etc/apt/trusted.gpg.d/docker.asc] https://download.docker.com/linux/{{ ansible_distribution | lower }} {{ ansible_distribution_release }} {{ docker_apt_repo_version }}"  # noqa line-length
 
@@ -71,13 +76,33 @@ containerd_io_filepath: "/usr/bin/containerd"
 
 containerd_io_dpkg: "containerd.io"
 
+# Docker Compose
+
+compose_cli_name: "Docker Compose"
+
+compose_cli_package: "docker-compose-plugin"
+
+compose_cli_filepath: "docker compose"
+
+compose_cli_dpkg: "docker-compose-plugin"
+
+# Docker Rootless Extras
+
+docker_rootless_name: "Docker Rootless Extras"
+
+docker_rootless_package: "docker-ce-rootless-extras"
+
+docker_rootless_filepath: "/usr/bin/rootlesskit"
+
+docker_rootless_dpkg: "docker-ce-rootless-extras"
+
 # Misc
 
 docker_package_state: "{{ 'latest' if (docker_version is defined and docker_version | lower == 'latest') else 'present' }}"
 
 put_docker_dpkg_into_hold: true
 
-docker_containers_startup_delay: 40
+docker_containers_startup_delay: "{{ 30 if continuous_integration else 120 }}"
 
 docker_filesystem_path: "/media/docker-volume.img"
 
@@ -87,13 +112,17 @@ docker_ipv6: "{{ dns.ipv6 }}"
 
 # Service
 
-docker_service_after: "{{ mount_type }}.service"
+docker_service_after: "{{ mergerfs_service_name }}"
 
-docker_service_sleep: 120
+docker_service_sleep: "{{ 0 if continuous_integration else 120 }}"
+
+docker_service_force: true
+
+docker_update_hosts_service_runtime_max: "3600s"
 
 docker_daemon_storage_driver: "{{ ('zfs' in var_lib_file_system.stdout) | ternary('zfs', 'overlay2') }}"
 
-fuse_overlayfs_releases_url: "{{ cvm }}https://api.github.com/repos/containers/fuse-overlayfs/releases/latest"
+fuse_overlayfs_releases_url: "{{ svm }}https://api.github.com/repos/containers/fuse-overlayfs/releases/latest"
 
 fuse_overlayfs_release_lookup_command: |
   curl -s {{ fuse_overlayfs_releases_url }} \
@@ -104,17 +133,4 @@ fuse_overlayfs_release_lookup_command: |
 # Docker Compose
 ################################
 
-compose_install_switch: true
-
-compose_switch_github_endpoint: "latest"
-
-compose_switch_releases_url: "{{ cvm }}https://api.github.com/repos/docker/compose-switch/releases/{{ compose_switch_github_endpoint }}"
-
-compose_switch_releases_download_url: https://github.com/docker/compose-switch/releases/download
-
-compose_switch_release_lookup_command: |
-  curl -s {{ compose_switch_releases_url }} \
-    | jq -r ".assets[] | select(.name | test(\"docker-compose-linux-amd64\")) \
-    | .browser_download_url"
-
-compose_switch_download_backup_url: "https://github.com/docker/compose-switch/releases/download/v1.0.4/docker-compose-linux-amd64"
+compose_cleanup_switch: "{{ compose_install_switch | default(true) }}"

@@ -33,7 +33,6 @@
 - name: "Import 'localhost.yml' from '{{ playbook_dir }}'"
   when: localhost_yml_playbook_dir.stat.exists and (not restore_tar is defined)
   block:
-
     - name: "Check if a previous 'localhost.yml' exists"
       ansible.builtin.stat:
         path: "/srv/git/saltbox/inventories/host_vars/localhost.yml"

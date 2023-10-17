@@ -1,17 +1,27 @@
 #########################################################################
 # Title:         Saltbox: Nvidia Role                                   #
-# Author(s):     desimaniac, l3uddz                                     #
+# Author(s):     desimaniac, l3uddz, salty                              #
 # URL:           https://github.com/saltyorg/Saltbox                    #
 # --                                                                    #
 #########################################################################
 #                   GNU General Public License v3.0                     #
 #########################################################################
 ---
-- name: Install common pip modules
-  ansible.builtin.pip:
-    name: jmespath
-    virtualenv_python: "{{ saltbox_python }}"
-    virtualenv: "{{ saltbox_venv_path }}"
+- name: Install mokutil
+  ansible.builtin.apt:
+    name: mokutil
+    state: present
+
+- name: Check if Secure Boot is enabled
+  ansible.builtin.shell: "mokutil --sb-state | grep -q 'SecureBoot enabled'"
+  register: secure_boot_enabled
+  changed_when: false
+  failed_when: false
+
+- name: Fail if Secure Boot is enabled
+  ansible.builtin.fail:
+    msg: "This role does not support SecureBoot enabled systems."
+  when: secure_boot_enabled.rc == 0
 
 - name: Install pkg-config
   ansible.builtin.apt:
@@ -28,8 +38,8 @@
   register: lspci_resp
 
 - name: Nvidia Setup block
+  when: (ansible_distribution == 'Ubuntu') and ('NVIDIA' in lspci_resp.stdout)
   block:
-
     - name: Get nvidia-smi driver version
       ansible.builtin.shell: "nvidia-smi --query-gpu=driver_version --format=csv,noheader"
       register: nvidia_smi_output
@@ -44,8 +54,8 @@
     # Purge Old Drivers
 
     - name: Nvidia Purge Drivers Tasks
+      when: (nvidia_installed_driver_version != nvidia_driver_version) and (nvidia_installed_driver_version | length > 0)
       block:
-
         - name: Purge Nvidia APT packages
           ansible.builtin.shell: "dpkg --force-depends -P $(dpkg -l | grep nvidia | awk '{print $2}')"
           register: dpkg_purge_output
@@ -76,8 +86,6 @@
             msg: "Uninstalled Nvidia driver. You will need to restart the server for changes to take effect."
           when: (dpkg_purge_output.stdout | length > 0) and (dpkg_purge_output.rc == 0)
 
-      when: (nvidia_installed_driver_version != nvidia_driver_version) and (nvidia_installed_driver_version | length > 0)
-
     # Configure Nvidia Kernel
 
     - name: Check if 'blacklist-nouveau.conf' exists
@@ -94,19 +102,17 @@
     # Install Nvidia Driver
 
     - name: Nvidia Driver Tasks
+      when: (nvidia_installed_driver_version != nvidia_driver_version)
       block:
-
         - name: "Nvidia Driver Task"
           ansible.builtin.include_tasks: "subtasks/driver.yml"
           when: (nvidia_driver_version | lower != 'ignore')
 
-      when: (nvidia_installed_driver_version != nvidia_driver_version)
-
     # Install Nvidia Driver Patch to remove transcode limit
 
     - name: Nvidia Driver Patch Tasks
+      when: ('GeForce' in lspci_resp.stdout)
       block:
-
         - name: Check to see if patch backup files exist
           ansible.builtin.find:
             paths: "{{ nvidia_patch_backup_file_location }}"
@@ -118,8 +124,6 @@
         - name: "Nvidia Driver Patch Task"
           ansible.builtin.include_tasks: "subtasks/patch.yml"
           when: (nvidia_patch_backup_files.matched | int == 0)
-
-      when: ('GeForce' in lspci_resp.stdout)
 
     # Install Nvidia Runtime Container
 
@@ -144,5 +148,3 @@
 
     - name: "Nvidia Nvtop Task"
       ansible.builtin.include_tasks: "subtasks/nvtop.yml"
-
-  when: (ansible_distribution == 'Ubuntu') and ('NVIDIA' in lspci_resp.stdout)

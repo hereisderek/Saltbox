@@ -7,8 +7,27 @@
 #                   GNU General Public License v3.0                     #
 #########################################################################
 ---
+- name: Check if running without tags
+  when: ('all' in ansible_run_tags)
+  block:
+    - name: "Notify | Saltbox Backup: Started Saltbox backup task"
+      ansible.builtin.include_role:
+        name: notify
+      vars:
+        message: "{{ backup_instance }} Backup: Role cannot run without a tag."
+
+    - name: Fail if running without a tag
+      ansible.builtin.fail:
+        msg:
+          - "Backup Role cannot run without a tag."
+          - "Use backup or backup2 tag."
+
 - name: Backup
   block:
+    - name: "Set 'backup_success' variable"
+      ansible.builtin.set_fact:
+        backup_success: false
+
     - name: Sanity Check
       ansible.builtin.import_tasks: "sanity_check.yml"
 
@@ -16,13 +35,23 @@
       ansible.builtin.import_tasks: "variables.yml"
       tags:
         - set-backup
+        - unset-backup
         - restore-service
         - saltbox-restore-service
+        - wipe-restore-service
+
+    - name: Import Restore Service Cleanup
+      ansible.builtin.import_tasks: "wipe_restore_service.yml"
+      when: ('wipe-restore-service' in ansible_run_tags) and not ('backup' in ansible_run_tags)
+      tags:
+        - wipe-restore-service
 
     - name: Cron
       ansible.builtin.import_tasks: "cron.yml"
-      when: ('set-backup' in ansible_run_tags) and not ('backup' in ansible_run_tags)
-      tags: set-backup
+      when: (['set-backup', 'unset-backup'] | intersect(ansible_run_tags)) and not ('backup' in ansible_run_tags)
+      tags:
+        - set-backup
+        - unset-backup
 
     - name: Get Current Time
       ansible.builtin.shell: "date \"+%s\""
@@ -39,7 +68,7 @@
       ansible.builtin.include_role:
         name: notify
       vars:
-        message: "Saltbox Backup: Started {{ use_snapshot | ternary('(snapshot-enabled) ', '') }}backup task."
+        message: "{{ backup_instance }} Backup: Started {{ use_snapshot | ternary('(snapshot-enabled) ', '') }}backup task."
 
     - name: "Create 'backup.lock'."
       ansible.builtin.file:
@@ -47,7 +76,7 @@
         state: touch
         owner: "{{ user.name }}"
         group: "{{ user.name }}"
-        mode: 0775
+        mode: "0775"
 
     - name: Check if previous backup folder exists
       ansible.builtin.stat:
@@ -70,6 +99,7 @@
         state: absent
 
     - name: Move previous backup if it exists locally
+      when: backup_local_folder.stat.exists and backup_local_folder.stat.isdir
       block:
         # Use mv because Ansible copy & delete takes a lot longer.
         - name: "Moving '{{ backup.local.destination }}' to '{{ backup.local.destination }}.old'"
@@ -77,7 +107,6 @@
           become: true
           become_user: "{{ user.name }}"
           when: dir_files.matched | int != 0
-      when: backup_local_folder.stat.exists and backup_local_folder.stat.isdir
 
     - name: "Create backup folders."
       ansible.builtin.file:
@@ -85,7 +114,7 @@
         state: directory
         owner: "{{ user.name }}"
         group: "{{ user.name }}"
-        mode: 0775
+        mode: "0775"
         recurse: true
       with_items:
         - "/home/{{ user.name }}/logs"
@@ -121,11 +150,11 @@
       ansible.builtin.set_fact:
         backup_enough_disk_space: "{{ (local_backup_destination_free_space.stdout | int) > (backup_estimated_size | int) }}"
 
-    - name: "Notify | Saltbox Backup: Started Saltbox backup task"
+    - name: "Notify | Saltbox Backup: Not enough disk space. Aborting."
       ansible.builtin.include_role:
         name: notify
       vars:
-        message: "Saltbox Backup: Not enough disk space. Aborting."
+        message: "{{ backup_instance }} Backup: Not enough disk space. Aborting."
       when: (not backup_enough_disk_space)
 
     - name: "Fail when not enough disk space"
@@ -150,7 +179,7 @@
         dest: "{{ backup.local.destination }}"
         owner: "{{ user.name }}"
         group: "{{ user.name }}"
-        mode: 0775
+        mode: "0775"
         force: true
       with_items:
         - "{{ playbook_dir }}/ansible.cfg"
@@ -176,7 +205,7 @@
         dest: "{{ backup.local.destination }}"
         owner: "{{ user.name }}"
         group: "{{ user.name }}"
-        mode: 0775
+        mode: "0775"
         force: true
       when: backup_excludes_list.stat.exists
 
@@ -187,7 +216,7 @@
           if ((backup_excludes_list is defined) and (backup_excludes_list.stat.exists))
           else (playbook_dir + '/roles/backup/files/backup_excludes_list.txt') }}"
 
-    - name: saltbox Restore Service
+    - name: Saltbox Restore Service
       ansible.builtin.import_tasks: "restore_service.yml"
       when: restore_service_enabled
       tags:
@@ -204,6 +233,7 @@
           --no-recursive \
           --no-links \
           --no-perms \
+          --exclude='saltbox_managed_*' \
           --include='*.service' \
           --include='*.mount' \
           /etc/systemd/system/* /opt/systemd-backup/
@@ -221,7 +251,7 @@
         state: directory
         owner: "{{ user.name }}"
         group: "{{ user.name }}"
-        mode: 0775
+        mode: "0775"
         recurse: true
       with_items:
         - "/opt/systemd-backup"
@@ -239,11 +269,11 @@
         docker_containers: "{{ docker_containers.stdout if (docker_containers is success) else '' }}"
 
     - name: Docker container tasks
+      when: (docker_containers | trim | length > 0)
       block:
-
         - name: Convert Docker containers string into a list
           ansible.builtin.set_fact:
-            docker_containers: "{{ (docker_containers).split() | sort }}"
+            docker_containers: "{{ docker_containers.split() | reject('in', gluetun_instances | default(['gluetun'])) | sort }}"
 
         - name: Filter out ignored apps from Docker containers list
           ansible.builtin.set_fact:
@@ -261,9 +291,8 @@
           ansible.builtin.include_role:
             name: notify
           vars:
-            message: "Saltbox Backup: Stopped Docker containers."
-
-      when: (docker_containers | trim | length > 0)
+            message: "{{ backup_instance }} Backup: Stopped Docker containers."
+          when: backup_notify_stop_docker_containers
 
     # Custom User Files
 
@@ -273,11 +302,10 @@
         dest: "{{ backup.local.destination }}"
         owner: "{{ user.name }}"
         group: "{{ user.name }}"
-        mode: 0775
+        mode: "0775"
         force: true
       with_items:
         - "{{ backup_user_defined_files }}"
-      ignore_errors: true
       when: (backup_user_defined_files | length > 0)
 
     # Services
@@ -293,8 +321,8 @@
       register: cloudplow_service
 
     - name: Stop 'cloudplow' service block
+      when: (cloudplow_service is defined) and cloudplow_service.stat.exists
       block:
-
         - name: Get 'cloudplow' service state
           ansible.builtin.set_fact:
             cloudplow_service_running: "{{ (services['cloudplow.service'] is defined) and (services['cloudplow.service']['state'] == 'running') }}"
@@ -305,13 +333,11 @@
             state: stopped
           when: cloudplow_service_running
 
-      when: (cloudplow_service is defined) and cloudplow_service.stat.exists
-
     # Create snapshot
 
     - name: Create Snapshot
+      when: use_snapshot
       block:
-
         - name: "Snapshot | Wait for 5 seconds before creating snapshot"
           ansible.builtin.wait_for:
             timeout: 5
@@ -328,13 +354,11 @@
           ansible.builtin.debug:
             msg: "Backup will now archive folders from '{{ backup_opt_path }}'"
 
-      when: use_snapshot
-
     # Start Docker containers when snapshot is enabled
 
     - name: Snapshot | Start Docker containers
+      when: use_snapshot
       block:
-
         - name: "Snapshot | Wait for 5 seconds before starting Docker containers"
           ansible.builtin.wait_for:
             timeout: 5
@@ -348,10 +372,8 @@
           ansible.builtin.include_role:
             name: notify
           vars:
-            message: "Saltbox Backup: Started Docker containers."
-          when: (docker_containers | trim | length > 0)
-
-      when: use_snapshot
+            message: "{{ backup_instance }} Backup: Started Docker containers."
+          when: (docker_containers | trim | length > 0) and backup_notify_start_docker_containers
 
     - name: "Get list of all folders in '{{ backup_opt_path }}'"
       ansible.builtin.find:
@@ -389,16 +411,16 @@
       ignore_errors: true
 
     - name: Snapshot | Cleanup Tasks
+      when: use_snapshot and (snapshot_type == 'btrfs')
       block:
-
         - name: Snapshot | Check if BTRFS snapshot is mounted
           ansible.builtin.stat:
             path: "{{ backup_snapshot_destination_path }}"
           register: btrfs_snapshot_mounted
 
         - name: Snapshot | Delete BTRFS snapshot
+          when: (btrfs_snapshot_mounted.stat.isdir is defined) and btrfs_snapshot_mounted.stat.isdir
           block:
-
             - name: Snapshot | Delete existing BTRFS snapshot (1/2)
               ansible.builtin.command: "btrfs subvolume delete {{ backup_snapshot_destination_path }}"
               register: snapshot_deletion
@@ -410,10 +432,6 @@
                 state: absent
               ignore_errors: true
               when: (snapshot_deletion is failed)
-
-          when: (btrfs_snapshot_mounted.stat.isdir is defined) and btrfs_snapshot_mounted.stat.isdir
-
-      when: use_snapshot and (snapshot_type == 'btrfs')
 
     - name: Check if tarball files were created
       ansible.builtin.find:
@@ -447,14 +465,15 @@
       ansible.builtin.include_role:
         name: notify
       vars:
-        message: "Saltbox Backup: Backup created with total size of {{ backup_size }}."
+        message: "{{ backup_instance }} Backup: Backup created with total size of {{ backup_size }}."
       ignore_errors: true
+      when: backup_notify_size
 
     # Start Docker containers when snapshot is not enabled
 
     - name: Start Docker Containers
+      when: (not use_snapshot)
       block:
-
         - name: "Wait for 5 seconds before starting Docker containers"
           ansible.builtin.wait_for:
             timeout: 5
@@ -468,10 +487,8 @@
           ansible.builtin.include_role:
             name: notify
           vars:
-            message: "Saltbox Backup: Started Docker containers."
-          when: (docker_containers | trim | length > 0)
-
-      when: (not use_snapshot)
+            message: "{{ backup_instance }} Backup: Started Docker containers."
+          when: (docker_containers | trim | length > 0) and backup_notify_start_docker_containers
 
     - name: "Wait for 10 seconds before uploads"
       ansible.builtin.wait_for:
@@ -503,6 +520,22 @@
       ignore_errors: true
       when: backup.rclone.enable
 
+    - name: Define Archive List
+      ansible.builtin.set_fact:
+        backup_archive_list:
+          - "opt"
+          - "ansible.cfg"
+          - "accounts.yml"
+          - "settings.yml"
+          - "adv_settings.yml"
+          - "backup_config.yml"
+          - "providers.yml"
+          - "rclone.conf"
+          - "localhost.yml"
+          - "hetzner_nfs.yml"
+          - "backup_excludes.txt"
+          - "backup_excludes_list.txt"
+
     # If rclone_timestamp is blank, default the naming of files to '/archived/old/filename.ext', else /archived/date/filename.ext.
     - name: "Archive previous files in '{{ backup.rclone.destination }}'"
       ansible.builtin.shell: |
@@ -518,19 +551,7 @@
       failed_when: rclone_move.rc > 3
       ignore_errors: true
       when: backup.rclone.enable and (rclone_timestamp is defined) and ('Failed' not in rclone_timestamp.stderr)
-      with_items:
-        - "opt"
-        - "ansible.cfg"
-        - "accounts.yml"
-        - "settings.yml"
-        - "adv_settings.yml"
-        - "backup_config.yml"
-        - "providers.yml"
-        - "rclone.conf"
-        - "localhost.yml"
-        - "hetzner_nfs.yml"
-        - "backup_excludes.txt"
-        - "backup_excludes_list.txt"
+      loop: "{{ backup_archive_list + backup_user_defined_files }}"
 
     - name: "Wait for 5 seconds before uploading"
       ansible.builtin.wait_for:
@@ -541,10 +562,10 @@
         /usr/bin/rclone copy \
           --user-agent='Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/74.0.3729.131 Safari/537.36' \
           --transfers="{{ backup_rclone_transfers }}" \
-          --drive-chunk-size="{{ backup_rclone_drive_chunk_size }}" \
-          --dropbox-chunk-size=150M \
+          {{ lookup('vars', 'backup_' + backup.rclone.template + '_template', default='') }} \
           --stats=30s \
           --bwlimit={{ backup_rclone_upload_speed_limit }} \
+          {{ '--bind=' + ansible_default_ipv4.address if mounts.ipv4_only else '' }} \
           -vv \
           --log-file='{{ playbook_dir }}/backup_rclone.log' \
           '{{ backup.local.destination }}' '{{ backup.rclone.destination }}'
@@ -557,8 +578,8 @@
       ansible.builtin.include_role:
         name: notify
       vars:
-        message: "Saltbox Backup: Rclone uploaded backup to '{{ backup.rclone.destination }}'."
-      when: backup.rclone.enable
+        message: "{{ backup_instance }} Backup: Rclone uploaded backup to '{{ backup.rclone.destination }}'."
+      when: backup.rclone.enable and backup_notify_rclone_complete
 
     - name: "Use rsync to upload backup to '{{ backup.rsync.destination }}'"
       ansible.posix.synchronize:
@@ -575,8 +596,8 @@
       ansible.builtin.include_role:
         name: notify
       vars:
-        message: "Saltbox Backup: Rsync uploaded backup to '{{ backup.rsync.destination }}'."
-      when: backup.rsync.enable
+        message: "{{ backup_instance }} Backup: Rsync uploaded backup to '{{ backup.rsync.destination }}'."
+      when: backup.rsync.enable and backup_notify_rsync_complete
 
     - name: Get Current Time
       ansible.builtin.shell: "date \"+%s\""
@@ -594,7 +615,7 @@
       ansible.builtin.include_role:
         name: notify
       vars:
-        message: "Saltbox Backup: Finished Saltbox {{ use_snapshot | ternary('(snapshot-enabled) ', '') }}backup task in {{ total_time }} minutes."
+        message: "{{ backup_instance }} Backup: Finished Saltbox {{ use_snapshot | ternary('(snapshot-enabled) ', '') }}backup task in {{ total_time }} minutes."
 
     - name: "Start 'cloudplow' service"
       ansible.builtin.systemd:
@@ -608,22 +629,26 @@
         state: absent
       when: (dir_files2.matched | int != 0) and (not backup.local.enable)
 
+    - name: "Set 'backup_success' variable"
+      ansible.builtin.set_fact:
+        backup_success: true
+
     - name: Backup Status - Success
       ansible.builtin.debug:
         msg: "Backup Completed Successfully."
 
   rescue:
     - name: Snapshot | Cleanup Tasks
+      when: use_snapshot and (snapshot_type == 'btrfs')
       block:
-
         - name: Snapshot | Check if BTRFS snapshot is mounted
           ansible.builtin.stat:
             path: "{{ backup_snapshot_destination_path }}"
           register: btrfs_snapshot_mounted
 
         - name: Snapshot | Delete BTRFS snapshot
+          when: (btrfs_snapshot_mounted.stat.isdir is defined) and btrfs_snapshot_mounted.stat.isdir
           block:
-
             - name: Snapshot | Delete existing BTRFS snapshot (1/2)
               ansible.builtin.command: "btrfs subvolume delete {{ backup_snapshot_destination_path }}"
               register: snapshot_deletion
@@ -636,17 +661,13 @@
               ignore_errors: true
               when: (snapshot_deletion is failed)
 
-          when: (btrfs_snapshot_mounted.stat.isdir is defined) and btrfs_snapshot_mounted.stat.isdir
-
-      when: use_snapshot and (snapshot_type == 'btrfs')
-
     - name: "Reset folder ownership of '{{ backup.local.destination }}/'"
       ansible.builtin.shell: "chown -R {{ user.name }}:{{ user.name }} {{ backup.local.destination }}/"
       ignore_errors: true
 
     - name: Start Docker Containers
+      when: (not use_snapshot)
       block:
-
         - name: "Wait for 5 seconds before starting Docker containers"
           ansible.builtin.wait_for:
             timeout: 5
@@ -655,8 +676,6 @@
           ansible.builtin.shell: 'docker start {{ docker_containers }}'
           ignore_errors: true
           when: (docker_containers | trim | length > 0)
-
-      when: (not use_snapshot)
 
     - name: "Start 'cloudplow' service"
       ansible.builtin.systemd:
@@ -672,7 +691,7 @@
       ansible.builtin.include_role:
         name: notify
       vars:
-        message: "Saltbox Backup: Backup terminated due to an error."
+        message: "{{ backup_instance }} Backup: Backup terminated due to an error."
 
   always:
     - name: "Remove 'backup.lock'"
@@ -683,3 +702,33 @@
     - name: "Reset logs folder ownership."
       ansible.builtin.shell: "chown -R {{ user.name }}:{{ user.name }} '/home/{{ user.name }}/logs/'"
       ignore_errors: true
+
+- name: Backup Cleanup Block
+  when: backup.rclone.enable and backup_cleanup_enabled and backup_success
+  block:
+    - name: Determine number of existing backups
+      ansible.builtin.shell: >
+        rclone lsd {{ backup.rclone.destination }}/archived | awk '{print $NF}' | sort
+      register: backup_list
+      become: true
+      become_user: "{{ user.name }}"
+
+    - name: Print existing backups status
+      ansible.builtin.debug:
+        msg: "Rclone returned an error so the remote is likely wrong or this is running against no archived backups."
+      when: backup_list.stderr_lines is search('directory not found', ignorecase=True)
+
+    - name: Set excess backups
+      ansible.builtin.set_fact:
+        excess_backups: "{{ backup_list.stdout_lines | length - backup_cleanup_number }}"
+      when: backup_list.stdout_lines | length > backup_cleanup_number
+
+    - name: Delete excess backups
+      ansible.builtin.shell: >
+        rclone purge {{ backup.rclone.destination }}/archived/{{ item if item | length > 0 else 'non-existant-folder-name' }}{{ (' ' + backup_cleanup_custom_rclone_flags) if backup_cleanup_custom_rclone_flags | length > 0 else '' }}
+      loop: "{{ backup_list.stdout_lines[: (excess_backups | int)] }}"
+      when:
+        - excess_backups is defined
+        - backup_list.stderr_lines is not search('directory not found', ignorecase=True)
+      become: true
+      become_user: "{{ user.name }}"

@@ -7,11 +7,25 @@
 #                   GNU General Public License v3.0                     #
 #########################################################################
 ---
+- name: Pre-Install | Remove 'qbittorrent.yml' file
+  ansible.builtin.file:
+    path: "/opt/traefik/{{ qbittorrent_name }}.yml"
+    state: absent
+
 - name: Pre-Install | Get next available port within the range of '56881-56901' # noqa fqcn[action]
-  find_next_open_port:
+  find_open_port:
     low_bound: 56881
     high_bound: 56901
+    protocol: both
   register: port_lookup_56881
+  ignore_errors: true
+
+- name: Pre-Install | Get next available port within the range of '8080-8090' # noqa fqcn[action]
+  find_open_port:
+    low_bound: 8080
+    high_bound: 8090
+    protocol: tcp
+  register: port_lookup_8080
   ignore_errors: true
 
 - name: Pre-Install | Settings | Update 'qBittorrent.conf' config settings
@@ -22,7 +36,7 @@
         path: "{{ qbittorrent_paths_conf }}"
         section: BitTorrent
         option: Session\Port
-        value: "{{ qbittorrent_docker_ports_56881 }}"
+        value: "{{ lookup('vars', qbittorrent_name + '_docker_ports_56881', default=qbittorrent_docker_ports_56881) }}"
         no_extra_spaces: true
         state: present
         owner: "{{ user.name }}"
@@ -76,3 +90,85 @@
         owner: "{{ user.name }}"
         group: "{{ user.name }}"
         mode: "0775"
+
+    - name: Pre-Install | Settings | Update LegalNotice.Accepted 'qBittorrent.conf' config settings
+      community.general.ini_file:
+        path: "{{ qbittorrent_paths_conf }}"
+        section: LegalNotice
+        option: Accepted
+        value: "true"
+        no_extra_spaces: true
+        state: present
+        owner: "{{ user.name }}"
+        group: "{{ user.name }}"
+        mode: "0775"
+
+    - name: Pre-Install | Settings | Update WebUI\Port 'qBittorrent.conf' config settings
+      community.general.ini_file:
+        path: "{{ qbittorrent_paths_conf }}"
+        section: Preferences
+        option: WebUI\Port
+        value: "{{ qbittorrent_docker_ports_8080 if qbittorrent_host_install else lookup('vars', qbittorrent_name + '_web_port', default=qbittorrent_web_port) }}"
+        no_extra_spaces: true
+        state: present
+        owner: "{{ user.name }}"
+        group: "{{ user.name }}"
+        mode: "0775"
+
+    - name: Pre-Install | Settings | Update WebUI\Port 'qBittorrent.conf' config settings
+      community.general.ini_file:
+        path: "{{ qbittorrent_paths_conf }}"
+        section: Preferences
+        option: WebUI\Address
+        value: "{{ '172.19.0.1' if qbittorrent_host_install else '*' }}"
+        no_extra_spaces: true
+        state: present
+        owner: "{{ user.name }}"
+        group: "{{ user.name }}"
+        mode: "0775"
+
+    - name: Post-Install | Settings | Update WebUI\TrustedReverseProxiesList 'qBittorrent.conf' config settings
+      community.general.ini_file:
+        path: "{{ qbittorrent_paths_conf }}"
+        section: Preferences
+        option: WebUI\TrustedReverseProxiesList
+        value: "172.19.0.0/16"
+        no_extra_spaces: true
+        state: present
+        owner: "{{ user.name }}"
+        group: "{{ user.name }}"
+        mode: "0775"
+
+    - name: Post-Install | Settings | Update FileLogger\Enabled 'qBittorrent.conf' config settings
+      community.general.ini_file:
+        path: "{{ qbittorrent_paths_conf }}"
+        section: Application
+        option: FileLogger\Enabled
+        value: "true"
+        no_extra_spaces: true
+        state: present
+        owner: "{{ user.name }}"
+        group: "{{ user.name }}"
+        mode: "0775"
+
+    - name: Post-Install | Settings | Update FileLogger\Path 'qBittorrent.conf' config settings
+      community.general.ini_file:
+        path: "{{ qbittorrent_paths_conf }}"
+        section: Application
+        option: FileLogger\Path
+        value: "{{ qbittorrent_paths_location + '/log' if qbittorrent_host_install else '/config/log' }}"
+        no_extra_spaces: true
+        state: present
+        owner: "{{ user.name }}"
+        group: "{{ user.name }}"
+        mode: "0775"
+
+- name: Pre-Install | Import 'qbittorrent.yml' file
+  ansible.builtin.template:
+    src: "qbittorrent.yml.j2"
+    dest: "/opt/traefik/{{ qbittorrent_name }}.yml"
+    owner: '{{ user.name }}'
+    group: '{{ user.name }}'
+    mode: "0644"
+    force: true
+  when: qbittorrent_host_install

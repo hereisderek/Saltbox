@@ -14,6 +14,12 @@
 readarr_instances: ["readarr"]
 
 ################################
+# Configuration
+################################
+
+readarr_external_auth: false
+
+################################
 # Paths
 ################################
 
@@ -31,8 +37,9 @@ readarr_paths_config_location: "{{ readarr_paths_location }}/config.xml"
 readarr_web_subdomain: "{{ readarr_name }}"
 readarr_web_domain: "{{ user.domain }}"
 readarr_web_port: "8787"
-readarr_web_url: "{{ 'https://' + lookup('vars', readarr_name + '_web_subdomain', default=readarr_web_subdomain)
-                     + '.' + lookup('vars', readarr_name + '_web_domain', default=readarr_web_domain) }}"
+readarr_web_url: "{{ 'https://' + (lookup('vars', readarr_name + '_web_subdomain', default=readarr_web_subdomain) + '.' + lookup('vars', readarr_name + '_web_domain', default=readarr_web_domain)
+                  if (lookup('vars', readarr_name + '_web_subdomain', default=readarr_web_subdomain) | length > 0)
+                  else lookup('vars', readarr_name + '_web_domain', default=readarr_web_domain)) }}"
 
 ################################
 # DNS
@@ -47,22 +54,12 @@ readarr_dns_proxy: "{{ dns.proxied }}"
 ################################
 
 readarr_traefik_sso_middleware: "{{ traefik_default_sso_middleware }}"
-
-readarr_traefik_middleware_default: "{{ traefik_default_middleware + ','
-                                        + lookup('vars', readarr_name + '_traefik_sso_middleware', default=readarr_traefik_sso_middleware)
-                                     if (lookup('vars', readarr_name + '_traefik_sso_middleware', default=readarr_traefik_sso_middleware) | length > 0)
-                                     else traefik_default_middleware }}"
+readarr_traefik_middleware_default: "{{ traefik_default_middleware }}"
 readarr_traefik_middleware_custom: ""
-readarr_traefik_middleware: "{{ readarr_traefik_middleware_default + ','
-                                + readarr_traefik_middleware_custom
-                             if (not readarr_traefik_middleware_custom.startswith(',') and readarr_traefik_middleware_custom | length > 0)
-                             else readarr_traefik_middleware_default
-                                + readarr_traefik_middleware_custom }}"
-
 readarr_traefik_certresolver: "{{ traefik_default_certresolver }}"
 readarr_traefik_enabled: true
 readarr_traefik_api_enabled: true
-readarr_traefik_api_endpoint: "`/api`,`/feed`,`/ping`"
+readarr_traefik_api_endpoint: "PathPrefix(`/api`) || PathPrefix(`/feed`) || PathPrefix(`/ping`)"
 
 ################################
 # API
@@ -75,7 +72,7 @@ readarr_api_key:
 # THEME
 ################################
 
-# Options can be found at https://github.com/gilbN/theme.park
+# Options can be found at https://github.com/themepark-dev/theme.park
 readarr_themepark_enabled: false
 readarr_themepark_theme: "{{ global_themepark_theme }}"
 readarr_themepark_domain: "{{ global_themepark_domain }}"
@@ -117,7 +114,7 @@ readarr_docker_envs: "{{ lookup('vars', readarr_name + '_docker_envs_default', d
 readarr_docker_commands_default: []
 readarr_docker_commands_custom: []
 readarr_docker_commands: "{{ lookup('vars', readarr_name + '_docker_commands_default', default=readarr_docker_commands_default)
-                             + lookup('vars', readarr_name + '_docker_docker_commands_custom', default=readarr_docker_commands_custom) }}"
+                             + lookup('vars', readarr_name + '_docker_commands_custom', default=readarr_docker_commands_custom) }}"
 
 # Volumes
 readarr_docker_volumes_default:

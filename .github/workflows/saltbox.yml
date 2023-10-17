@@ -14,6 +14,7 @@ on:
       - 'roles/plex_extra_tasks/**'
       - 'roles/plex_auth_token/**'
       - 'roles/plex_db/**'
+      - 'roles/arr_db/**'
   pull_request:
     paths-ignore:
       - '.github/**'
@@ -27,34 +28,42 @@ on:
       - 'roles/plex_extra_tasks/**'
       - 'roles/plex_auth_token/**'
       - 'roles/plex_db/**'
+      - 'roles/arr_db/**'
   workflow_dispatch:
 
 jobs:
   ansible-lint:
     runs-on: ubuntu-22.04
     steps:
-    - uses: actions/checkout@v3
+      - uses: actions/checkout@v3
 
-    - name: Lint Ansible Playbook
-      uses: ansible-community/ansible-lint-action@v6.8.2
+      - uses: actions/setup-python@v4
+        with:
+          python-version: '3.10'
+
+      - name: Install packages
+        run: pip install "ansible>=7.0.0,<8.0.0" ansible-lint==6.19.0 jmespath
+
+      - name: Run ansible linter
+        run: ansible-lint
 
   add-contributors:
     runs-on: ubuntu-22.04
     if: github.ref == 'refs/heads/master'
     steps:
-    - uses: actions/checkout@v3
+      - uses: actions/checkout@v3
 
-    - uses: BobAnkh/add-contributors@master
-      with:
-        REPO_NAME: 'saltyorg/Saltbox'
-        CONTRIBUTOR: '### Contributors'
-        COLUMN_PER_ROW: '6'
-        ACCESS_TOKEN: ${{secrets.GITHUB_TOKEN}}
-        IMG_WIDTH: '100'
-        FONT_SIZE: '14'
-        PATH: '/README.md'
-        COMMIT_MESSAGE: 'docs(README): update contributors'
-        AVATAR_SHAPE: 'square'
+      - uses: BobAnkh/add-contributors@master
+        with:
+          REPO_NAME: 'saltyorg/Saltbox'
+          CONTRIBUTOR: '### Contributors'
+          COLUMN_PER_ROW: '6'
+          ACCESS_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          IMG_WIDTH: '100'
+          FONT_SIZE: '14'
+          PATH: '/README.md'
+          COMMIT_MESSAGE: 'docs(README): update contributors'
+          AVATAR_SHAPE: 'square'
 
   find-roles:
     runs-on: ubuntu-22.04
@@ -63,14 +72,14 @@ jobs:
     steps:
       - uses: actions/checkout@v3
       - id: set-matrix
-        run: echo "matrix={\"roles\":[$(awk '/# Core/{flag=1;next}/# Apps End/{flag=0}flag' saltbox.yml | awk '!/#/' | awk -F'[][]' '{print $2}' | tr '\n' ',' | sed 's/,*$//' | awk -F',' '{ for( i=1; i<=NF; i++ ) print $i }' | awk '{ gsub(/ /,""); print }'| sort -u | awk -vORS=, '{ print $1 }' | sed 's/,$/\n/' | sed "s/.\(roles\|common\|hetzner\|kernel\|motd\|mounts\|mounts_override\|nvidia\|preinstall\|rclone\|scripts\|shell\|system\|traefik\|traefik_reset_certs\|user\|cloudflare\|plex-db\).,//g")]}" >> $GITHUB_OUTPUT
+        run: echo "matrix={\"roles\":[$(awk '/# Core/{flag=1;next}/# Apps End/{flag=0}flag' saltbox.yml | awk '!/#/' | awk -F'[][]' '{print $2}' | tr '\n' ',' | sed 's/,*$//' | awk -F',' '{ for( i=1; i<=NF; i++ ) print $i }' | awk '{ gsub(/ /,""); print }'| sort -u | awk -vORS=, '{ print $1 }' | sed 's/,$/\n/' | sed "s/.\(roles\|common\|hetzner\|kernel\|motd\|mounts\|nvidia\|preinstall\|rclone\|scripts\|shell\|system\|traefik\|traefik-reset-certs\|user\|cloudflare\|plex-db\|arr-db\|ddns\).,//g")]}" >> $GITHUB_OUTPUT
 
   install:
     name: '${{ matrix.roles }}'
     runs-on: ubuntu-22.04
     needs: [ansible-lint, find-roles]
     strategy:
-      matrix: ${{fromJson(needs.find-roles.outputs.matrix)}}
+      matrix: ${{ fromJson(needs.find-roles.outputs.matrix) }}
       fail-fast: false
 
     steps:
@@ -86,7 +95,7 @@ jobs:
           max_attempts: 3
           shell: bash
           command: curl https://raw.githubusercontent.com/saltyorg/sb/master/sb_dep.sh --output sb_dep.sh && sudo bash sb_dep.sh -v && /srv/ansible/venv/bin/ansible --version
-        
+
       - name: Create /srv/git
         run: sudo mkdir /srv/git
 
@@ -129,11 +138,10 @@ jobs:
     name: 'webhook'
     runs-on: self-hosted
     needs: install
-    if: always()
+    if: always() && github.event_name != 'pull_request' && github.event.repository.fork == false
     steps:
       - uses: technote-space/workflow-conclusion-action@v3
       - uses: sarisia/actions-status-discord@v1
-        if: always()
         with:
           webhook: ${{ secrets.DISCORD_WEBHOOK }}
           status: ${{ env.WORKFLOW_CONCLUSION }}

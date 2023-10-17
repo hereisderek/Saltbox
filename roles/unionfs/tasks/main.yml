@@ -16,28 +16,21 @@
 
 - name: Docker Containers Stop Tasks
   ansible.builtin.import_tasks: "subtasks/docker/containers_stop.yml"
-  when: not (('mounts' in ansible_run_tags) or ('mounts_override' in ansible_run_tags))
+  when: (not containers_list is defined)
 
 # Existing Setup
 
-- name: Service Tasks
-  ansible.builtin.include_tasks: "subtasks/services.yml"
-  vars:
-    _service_file: "{{ item }}"
-  loop: "{{ service_files }}"
+- name: Legacy Task
+  ansible.builtin.import_tasks: "subtasks/legacy.yml"
 
-# New Setup
+# Mount Mergerfs
 
-- name: Basic Tasks
-  ansible.builtin.import_tasks: "subtasks/basics.yml"
-
-# Mount UnionFS
-
-- name: Mount UnionFS Tasks
+- name: MergerFS Tasks
   ansible.builtin.include_tasks: "subtasks/mergerfs.yml"
 
 - name: Docker Daemon Tasks
   ansible.builtin.import_tasks: "subtasks/docker/daemon.yml"
+  when: ('mounts' in ansible_run_tags)
 
 # Start Docker Containers
 

@@ -12,27 +12,31 @@
     path: "{{ qbittorrent_paths_conf }}"
     state: present
 
-- name: Post-Install | Wait for 10 seconds
+- name: Post-Install | Wait for 30 seconds
   ansible.builtin.wait_for:
-    timeout: 10
+    timeout: 30
 
 - name: Post-Install | Stop container
-  community.docker.docker_container:
-    name: "{{ qbittorrent_docker_container }}"
-    container_default_behavior: compatibility
-    tls_hostname: localhost
+  ansible.builtin.include_tasks: "{{ resources_tasks_path }}/docker/stop_docker_container.yml"
+  when: not qbittorrent_host_install
+
+- name: Post-Install | Stop '{{ qbittorent_service_name }}'
+  ansible.builtin.systemd:
+    name: "{{ qbittorent_service_name }}"
     state: stopped
-    comparisons:
-      '*': ignore
+    enabled: true
+  when: qbittorrent_host_install
 
 - name: Post-Install | Settings Task
   ansible.builtin.import_tasks: "settings/main.yml"
 
-- name: Post-Install | Start container # noqa args[module]
-  community.docker.docker_container:
-    name: "{{ qbittorrent_docker_container }}"
-    container_default_behavior: compatibility
-    tls_hostname: localhost
-    state: "{{ qbittorrent_docker_state }}"
-    comparisons:
-      '*': ignore
+- name: Post-Install | Start container
+  ansible.builtin.include_tasks: "{{ resources_tasks_path }}/docker/start_docker_container.yml"
+  when: not qbittorrent_host_install
+
+- name: Post-Install | Start '{{ qbittorent_service_name }}'
+  ansible.builtin.systemd:
+    name: "{{ qbittorent_service_name }}"
+    state: started
+    enabled: true
+  when: qbittorrent_host_install
