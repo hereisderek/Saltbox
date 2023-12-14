@@ -20,3 +20,4 @@
 
 - name: Reload sysctl settings.
   ansible.builtin.shell: sysctl --system
+  ignore_errors: true

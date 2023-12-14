@@ -71,6 +71,7 @@
   rescue:
     - name: Install missing modules package
       ansible.builtin.shell: "apt-get install --reinstall linux-modules-{{ ansible_kernel }}"
+      ignore_errors: true
 
 - name: "Import Daemon Tasks"
   ansible.builtin.import_tasks: "subtasks/daemon.yml"

@@ -61,5 +61,11 @@
     owner: "{{ user.name }}"
     group: "{{ user.name }}"
     mode: "0775"
+    recurse: true
+
+- name: "Mount Path | Modify '/mnt/unionfs' directory chattr +i"
+  ansible.builtin.file:
+    path: "/mnt/unionfs"
     attributes: '+i'
     recurse: true
+    ignore_errors: true
